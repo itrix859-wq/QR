@@ -1,0 +1,17 @@
+{
+  "name": "etch-qr-ai",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
+    "nodemailer": "^6.9.16",
+    "sharp": "^0.33.5"
+  }
+}
