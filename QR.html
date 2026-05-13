@@ -1733,6 +1733,17 @@
       font: 700 0.86rem/1.55 Arial, "Segoe UI", sans-serif;
     }
 
+    .contact-email-link {
+      color: #0b73ff;
+      font-weight: 900;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+
+    .contact-email-link:hover {
+      text-decoration: underline;
+    }
+
     .terms-link {
       padding: 0;
       color: #0b73ff;
@@ -2119,6 +2130,20 @@
     .auth-form {
       display: grid;
       gap: 0.72rem;
+    }
+
+    .auth-tabs,
+    .auth-divider,
+    #authEmail,
+    .birthday-row,
+    #authCodeFields,
+    .password-wrap,
+    #forgotPasswordButton,
+    .terms-row,
+    #recaptchaWrap,
+    #authSubmitButton,
+    #authSwitchText {
+      display: none !important;
     }
 
     .signup-only {
@@ -3801,6 +3826,13 @@
             </svg>
             <span data-i18n="terms">Terms and Conditions</span>
           </button>
+          <button class="account-menu-button" type="button" data-account-section="contact">
+            <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="m3 7 9 6 9-6" />
+            </svg>
+            <span data-i18n="contactUs">Contact Us</span>
+          </button>
         </nav>
         <div class="account-content">
           <section class="account-panel is-active" data-account-panel="info">
@@ -3860,6 +3892,12 @@
           </section>
           <section class="account-panel" data-account-panel="terms">
             <div class="text-box" id="accountTermsBox"></div>
+          </section>
+          <section class="account-panel" data-account-panel="contact">
+            <div class="text-box contact-box">
+              <h2 data-i18n="contactUs">Contact Us</h2>
+              <p><span data-i18n="contactUsAt">Contact us at:</span> <a class="contact-email-link" href="mailto:qrmaker.support@gmail.com">qrmaker.support@gmail.com</a></p>
+            </div>
           </section>
         </div>
       </div>
@@ -4293,6 +4331,8 @@
         general: "General",
         about: "About",
         terms: "Terms and Conditions",
+        contactUs: "Contact Us",
+        contactUsAt: "Contact us at:",
         email: "Email",
         password: "Password",
         created: "Created",
@@ -4374,6 +4414,8 @@
         deleteChat: "Delete chat",
       },
       Arabic: {
+        contactUs: "\u062a\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627",
+        contactUsAt: "\u062a\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627 \u0639\u0644\u0649:",
         accountSettings: "إعدادات الحساب",
         accountSubtitle: "تفاصيل حساب QR الخاص بك",
         accountInfo: "معلومات الحساب",
@@ -5920,7 +5962,7 @@
       document.body.classList.add("auth-modal-open");
 
       setTimeout(() => {
-        authEmail.focus();
+        googleAuthButton.focus();
       }, 120);
     }
 
@@ -6013,134 +6055,7 @@
     }
 
     async function handleAuthSubmit() {
-      if (authBusy) {
-        return;
-      }
-
-      if (!authForm.reportValidity()) {
-        return;
-      }
-
-      const email = authEmail.value.trim().toLowerCase();
-      const password = authPassword.value;
-      const code = getOtpCode();
-
-      setAuthLoading(true);
-      setAuthMessage("");
-
-      try {
-        if (authMode === "signin") {
-          const payload = await postJson("/sign-in", { email, password });
-          setAuthUser({
-            uid: payload.uid,
-            email: payload.email,
-            idToken: payload.idToken || "",
-            provider: payload.provider || "password",
-            createdAt: payload.createdAt || "",
-            birthday: payload.birthday || "",
-            password,
-          });
-          setAuthMessage(payload.message || "Signed in successfully.");
-          await delay(550);
-          const shouldContinueAi = pendingAiSubmitAfterAuth;
-          if (shouldContinueAi) {
-            pendingAiSubmitAfterAuth = false;
-            pendingAiGuestSubmit = false;
-            localStorage.setItem("qrAiGuestPromptSeen", "true");
-          }
-          closeAuthModal();
-          if (shouldContinueAi) {
-            await generateAiTemplate({ skipGuestGate: true });
-            return;
-          }
-          if (isAccountPage || localStorage.getItem(pageStorageKey) === "account") {
-            openAccountPage({ section: "info" });
-          }
-          return;
-        }
-
-        if (authMode === "signup" && !authCodeStep) {
-          if (!authTerms.checked) {
-            throw new Error("Please agree to the Terms and Conditions.");
-          }
-
-          const recaptchaToken = await getSignupRecaptchaToken();
-
-          if (recaptchaSiteKey && !recaptchaToken) {
-            throw new Error("Please complete the CAPTCHA.");
-          }
-
-          const payload = await postJson("/send-code", {
-            email,
-            password,
-            birthday: getAuthBirthday(),
-            name: getAuthDisplayName(email),
-            recaptchaToken,
-          });
-          setAuthMode("signup", {
-            codeStep: true,
-            message: payload.message || "Verification code sent.",
-          });
-          focusFirstOtpInput();
-          return;
-        }
-
-        if (authMode === "signup") {
-          if (!/^[0-9]{6}$/.test(code)) {
-            focusFirstOtpInput();
-            throw new Error("Please enter a valid 6-digit code.");
-          }
-
-          const payload = await postJson("/verify-code", { email, code });
-          setAuthMode("signin", {
-            message: payload.message || "Account created. Sign in now.",
-          });
-          authPassword.value = "";
-          authEmail.disabled = false;
-          authEmail.focus();
-          return;
-        }
-
-        if (authMode === "reset" && !authCodeStep) {
-          const payload = await postJson("/send-reset-code", { email });
-          setAuthMode("reset", {
-            codeStep: true,
-            message: payload.message || "Password reset code sent.",
-          });
-          authPassword.value = "";
-          focusFirstOtpInput();
-          return;
-        }
-
-        if (authMode === "reset") {
-          if (!/^[0-9]{6}$/.test(code)) {
-            focusFirstOtpInput();
-            throw new Error("Please enter a valid 6-digit code.");
-          }
-
-          const payload = await postJson("/reset-password", {
-            email,
-            code,
-            newPassword: password,
-          });
-          setAuthMode("signin", {
-            message: payload.message || "Password reset successfully. You can sign in now.",
-          });
-          const currentUser = getAuthUser();
-          if (currentUser?.email === email) {
-            setAuthUser({ ...currentUser, password });
-          }
-          authPassword.value = "";
-          authEmail.disabled = false;
-        }
-      } catch (error) {
-        setAuthMessage(error.message || "Something went wrong.", "error");
-        if (authMode === "signup" && !authCodeStep) {
-          resetSignupRecaptcha();
-        }
-      } finally {
-        setAuthLoading(false);
-      }
+      setAuthMessage("Email/password sign in is no longer available. Please continue with Google.", "error");
     }
 
     function buildQrUrl(link, size = 900) {
@@ -6769,31 +6684,7 @@
     }
 
     async function refreshAiAuthTokenIfPossible() {
-      const user = getAuthUser();
-
-      if (!user || user.idToken || !user.email || !user.password || user.provider === "google") {
-        return false;
-      }
-
-      try {
-        const payload = await postJson("/sign-in", {
-          email: user.email,
-          password: user.password,
-        });
-        setAuthUser({
-          ...user,
-          uid: payload.uid || user.uid,
-          email: payload.email || user.email,
-          idToken: payload.idToken || "",
-          provider: payload.provider || user.provider || "password",
-          createdAt: payload.createdAt || user.createdAt || "",
-          birthday: payload.birthday || user.birthday || "",
-        });
-        return Boolean(payload.idToken);
-      } catch (error) {
-        console.warn("Could not refresh auth token for AI history.", error);
-        return false;
-      }
+      return false;
     }
 
     async function aiHistoryRequest(url, options = {}) {
