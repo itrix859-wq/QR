@@ -47,12 +47,21 @@ app.get("/auth-config", (req, res) => {
   });
 });
 
+const EMAIL_SEND_WAIT_MS = Math.max(0, Number.parseInt(process.env.EMAIL_SEND_WAIT_MS || "2500", 10) || 0);
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  pool: true,
+  maxConnections: 2,
+  maxMessages: 100,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+});
+
+transporter.verify().catch((error) => {
+  console.warn("Email transporter verification failed:", error.message || error);
 });
 
 function generateCode() {
@@ -214,6 +223,32 @@ async function sendCodeEmail({ to, name, code, subject, title, message }) {
       },
     ],
   });
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function sendCodeEmailWithFastResponse(options) {
+  const sendPromise = sendCodeEmail(options);
+
+  if (EMAIL_SEND_WAIT_MS <= 0) {
+    await sendPromise;
+    return { pending: false };
+  }
+
+  const result = await Promise.race([
+    sendPromise.then(() => ({ pending: false })),
+    wait(EMAIL_SEND_WAIT_MS).then(() => ({ pending: true })),
+  ]);
+
+  if (result.pending) {
+    sendPromise.catch((error) => {
+      console.error("Email delivery failed after response:", error.message || error);
+    });
+  }
+
+  return result;
 }
 
 function verifyOtpRecord(record, code) {
@@ -768,18 +803,26 @@ app.post("/send-code", async (req, res) => {
       birthday,
     });
 
-    await sendCodeEmail({
-      to: email,
-      name,
-      code: record.code,
-      subject: "Your QMakerr verification code",
-      title: "Your verification code is:",
-      message: "Use this code to complete your account registration.",
-    });
+    let emailResult;
+    try {
+      emailResult = await sendCodeEmailWithFastResponse({
+        to: email,
+        name,
+        code: record.code,
+        subject: "Your QMakerr verification code",
+        title: "Your verification code is:",
+        message: "Use this code to complete your account registration.",
+      });
+    } catch (error) {
+      deleteOtp("signup", email);
+      throw error;
+    }
 
-    return res.json({
+    return res.status(emailResult.pending ? 202 : 200).json({
       success: true,
-      message: "Verification code sent.",
+      message: emailResult.pending
+        ? "Verification code is being sent. Please check your email in a moment."
+        : "Verification code sent.",
     });
   } catch (error) {
     return res.status(500).json({
@@ -867,18 +910,26 @@ app.post("/send-reset-code", async (req, res) => {
       uid: user.uid,
     });
 
-    await sendCodeEmail({
-      to: email,
-      name,
-      code: record.code,
-      subject: "Your QMakerr password reset code",
-      title: "Your password reset code is:",
-      message: "Use this code to reset your password.",
-    });
+    let emailResult;
+    try {
+      emailResult = await sendCodeEmailWithFastResponse({
+        to: email,
+        name,
+        code: record.code,
+        subject: "Your QMakerr password reset code",
+        title: "Your password reset code is:",
+        message: "Use this code to reset your password.",
+      });
+    } catch (error) {
+      deleteOtp("reset", email);
+      throw error;
+    }
 
-    return res.json({
+    return res.status(emailResult.pending ? 202 : 200).json({
       success: true,
-      message: "Password reset code sent.",
+      message: emailResult.pending
+        ? "Password reset code is being sent. Please check your email in a moment."
+        : "Password reset code sent.",
     });
   } catch (error) {
     return res.status(500).json({
