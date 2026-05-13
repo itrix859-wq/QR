@@ -2075,6 +2075,35 @@
       stroke-linecap: round;
     }
 
+    .auth-brand-panel {
+      display: grid;
+      justify-items: center;
+      gap: 0.42rem;
+      padding: 0.35rem 0 0.7rem;
+      text-align: center;
+    }
+
+    .auth-brand-logo {
+      width: min(8rem, 54%);
+      height: auto;
+      object-fit: contain;
+      filter: var(--logo-filter);
+    }
+
+    .auth-brand-panel h2 {
+      margin: 0.15rem 0 0;
+      color: var(--auth-text);
+      font: 900 1.22rem/1.18 Arial, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .auth-brand-panel p {
+      margin: 0;
+      color: var(--auth-muted);
+      font: 600 0.86rem/1.4 Arial, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
     .auth-context-notice {
       display: none;
       margin: 0 1.5rem 0.82rem;
@@ -2133,7 +2162,6 @@
     }
 
     .auth-tabs,
-    .auth-divider,
     #authEmail,
     .birthday-row,
     #authCodeFields,
@@ -3947,12 +3975,18 @@
           <path d="m6 6 12 12" />
         </svg>
       </button>
+      <div class="auth-brand-panel">
+        <img class="auth-brand-logo" src="photos/logo.png" alt="QMakerr" />
+        <h2 data-i18n="welcomeBack">Welcome Back!</h2>
+        <p data-i18n="signInSubtitle">Sign in to continue to your account</p>
+      </div>
       <p class="auth-context-notice" id="authContextNotice"></p>
       <div class="auth-tabs" role="tablist" aria-label="Authentication">
         <button class="auth-tab is-active" type="button" role="tab" aria-selected="true" data-auth-tab="signin" data-i18n="signIn">Sign In</button>
         <button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-tab="signup" data-i18n="createAccount">Create Account</button>
       </div>
       <form class="auth-form" id="authForm">
+        <div class="auth-divider"><span data-i18n="continueGoogle">Continue with Google</span></div>
         <button class="google-button" id="googleAuthButton" type="button">
           <svg class="google-mark" viewBox="0 0 24 24" aria-hidden="true">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09Z" />
@@ -3962,7 +3996,7 @@
           </svg>
           <span data-i18n="continueGoogle">Continue with Google</span>
         </button>
-        <div class="auth-divider"><span data-i18n="or">or</span></div>
+
         <input class="auth-input" id="authEmail" type="email" placeholder="Email" data-i18n-placeholder="email" autocomplete="email" />
         <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
         <div class="birthday-row signup-only" aria-label="Date of birth">
@@ -4362,6 +4396,8 @@
         aiPromptPlaceholder: "Describe your custom template",
         sendAiPrompt: "Send AI prompt",
         continueGoogle: "Continue with Google",
+        welcomeBack: "Welcome Back!",
+        signInSubtitle: "Sign in to continue to your account",
         or: "or",
         month: "Month",
         forgotPassword: "Forgot password?",
@@ -4451,6 +4487,8 @@
         aiPromptPlaceholder: "اوصف قالبك المخصص",
         sendAiPrompt: "إرسال وصف الذكاء الاصطناعي",
         continueGoogle: "المتابعة باستخدام Google",
+        welcomeBack: "\u0645\u0631\u062d\u0628\u0627\u064b \u0628\u0639\u0648\u062f\u062a\u0643!",
+        signInSubtitle: "\u0633\u062c\u0651\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0644\u0644\u0645\u062a\u0627\u0628\u0639\u0629 \u0625\u0644\u0649 \u062d\u0633\u0627\u0628\u0643",
         or: "أو",
         month: "الشهر",
         forgotPassword: "هل نسيت كلمة المرور؟",
