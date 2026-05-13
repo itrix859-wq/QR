@@ -47,13 +47,11 @@ app.get("/auth-config", (req, res) => {
   });
 });
 
-const EMAIL_SEND_WAIT_MS = Math.max(0, Number.parseInt(process.env.EMAIL_SEND_WAIT_MS || "2500", 10) || 0);
-
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  pool: true,
-  maxConnections: 2,
-  maxMessages: 100,
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 20000,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -225,31 +223,6 @@ async function sendCodeEmail({ to, name, code, subject, title, message }) {
   });
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function sendCodeEmailWithFastResponse(options) {
-  const sendPromise = sendCodeEmail(options);
-
-  if (EMAIL_SEND_WAIT_MS <= 0) {
-    await sendPromise;
-    return { pending: false };
-  }
-
-  const result = await Promise.race([
-    sendPromise.then(() => ({ pending: false })),
-    wait(EMAIL_SEND_WAIT_MS).then(() => ({ pending: true })),
-  ]);
-
-  if (result.pending) {
-    sendPromise.catch((error) => {
-      console.error("Email delivery failed after response:", error.message || error);
-    });
-  }
-
-  return result;
-}
 
 function verifyOtpRecord(record, code) {
   if (!record) {
@@ -803,9 +776,8 @@ app.post("/send-code", async (req, res) => {
       birthday,
     });
 
-    let emailResult;
     try {
-      emailResult = await sendCodeEmailWithFastResponse({
+      await sendCodeEmail({
         to: email,
         name,
         code: record.code,
@@ -818,11 +790,9 @@ app.post("/send-code", async (req, res) => {
       throw error;
     }
 
-    return res.status(emailResult.pending ? 202 : 200).json({
+    return res.json({
       success: true,
-      message: emailResult.pending
-        ? "Verification code is being sent. Please check your email in a moment."
-        : "Verification code sent.",
+      message: "Verification code sent.",
     });
   } catch (error) {
     return res.status(500).json({
@@ -910,9 +880,8 @@ app.post("/send-reset-code", async (req, res) => {
       uid: user.uid,
     });
 
-    let emailResult;
     try {
-      emailResult = await sendCodeEmailWithFastResponse({
+      await sendCodeEmail({
         to: email,
         name,
         code: record.code,
@@ -925,11 +894,9 @@ app.post("/send-reset-code", async (req, res) => {
       throw error;
     }
 
-    return res.status(emailResult.pending ? 202 : 200).json({
+    return res.json({
       success: true,
-      message: emailResult.pending
-        ? "Password reset code is being sent. Please check your email in a moment."
-        : "Password reset code sent.",
+      message: "Password reset code sent.",
     });
   } catch (error) {
     return res.status(500).json({
