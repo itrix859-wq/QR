@@ -20,7 +20,6 @@
       --logo-filter: none;
       --ai-logo-color: #000000;
       --divider-color: rgba(0, 0, 0, 0.32);
-      --beta-color: rgba(90, 90, 90, 0.48);
       --inverse-surface: #050505;
       --inverse-text: #ffffff;
       --inverse-muted: rgba(255, 255, 255, 0.54);
@@ -41,7 +40,6 @@
       --logo-filter: invert(1);
       --ai-logo-color: #ffffff;
       --divider-color: rgba(255, 255, 255, 0.42);
-      --beta-color: rgba(190, 190, 190, 0.5);
       --inverse-surface: #f7f7f4;
       --inverse-text: #050505;
       --inverse-muted: rgba(5, 5, 5, 0.54);
@@ -93,7 +91,7 @@
     .site-header::after {
       position: absolute;
       right: 0;
-      bottom: 0.34rem;
+      bottom: -0.52rem;
       left: 0.35rem;
       z-index: 3;
       height: 1px;
@@ -101,23 +99,6 @@
       background: var(--divider-color);
       transform-origin: left center;
       transition: background-color var(--theme-duration) ease;
-    }
-
-    .beta-version {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      z-index: 4;
-      color: var(--beta-color);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0;
-      line-height: 1;
-      text-align: center;
-      transform: translate(-50%, -50%);
-      white-space: nowrap;
-      pointer-events: none;
-      transition: color var(--theme-duration) ease;
     }
 
     .logo-link,
@@ -152,8 +133,8 @@
     }
 
     .logo-link:hover {
-      opacity: 0.78;
-      transform: translateX(-1px);
+      opacity: 0.86;
+      transform: translateY(-0.28rem);
     }
 
     .logo-link.is-spinning {
@@ -176,8 +157,8 @@
     }
 
     .ai-logo-button:hover {
-      opacity: 0.76;
-      transform: translateY(-1px);
+      opacity: 0.86;
+      transform: translateY(-0.28rem);
     }
 
     .ai-logo-button:active,
@@ -214,10 +195,14 @@
       color: #18b957;
     }
 
-    .settings-icon-button:hover,
+    .settings-icon-button:hover {
+      opacity: 0.86;
+      transform: translateY(-0.28rem);
+    }
+
     .login-icon-button:hover {
-      opacity: 0.78;
-      transform: translateY(-1px);
+      opacity: 0.86;
+      transform: translateY(-0.28rem);
     }
 
     .settings-icon-button:active,
@@ -239,6 +224,39 @@
       stroke-linecap: round;
       stroke-linejoin: round;
       fill: none;
+    }
+
+    .login-account-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 1.5px solid rgba(163, 163, 163, 0.72);
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0.16rem 0.42rem rgba(0, 0, 0, 0.18);
+    }
+
+    .site-header [data-hover-label]::after {
+      position: absolute;
+      top: calc(100% + 0.22rem);
+      left: 50%;
+      z-index: 8;
+      color: var(--logo-color);
+      font: 900 0.68rem/1 Arial, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      text-align: center;
+      text-transform: none;
+      white-space: nowrap;
+      content: attr(data-hover-label);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -0.18rem);
+      transition: opacity 180ms ease, transform 220ms ease, color var(--theme-duration) ease;
+    }
+
+    .site-header [data-hover-label]:hover::after {
+      opacity: 1;
+      transform: translate(-50%, 0);
     }
 
     .logo-mark {
@@ -422,7 +440,7 @@
     .link-label {
       display: block;
       margin: 0 0 0.55rem;
-      color: var(--beta-color);
+      color: var(--auth-muted);
       font-size: 0.95rem;
       font-weight: 700;
       letter-spacing: 0;
@@ -2495,7 +2513,7 @@
     }
 
     .otp-input:focus {
-      border-color: rgba(37, 99, 235, 0.72);
+      border-color: #ffffff;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
       transform: translateY(-1px);
     }
@@ -2708,9 +2726,9 @@
       display: none;
       width: 100%;
       min-height: 2.55rem;
-      color: #2563eb;
+      color: #ffffff;
       background: transparent;
-      border: 1px solid rgba(37, 99, 235, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.86);
       border-radius: 0.48rem;
       font: 900 0.84rem/1 Arial, "Segoe UI", sans-serif;
       letter-spacing: 0;
@@ -2724,7 +2742,7 @@
 
     .auth-guest-continue:hover {
       opacity: 0.84;
-      border-color: rgba(37, 99, 235, 0.72);
+      border-color: #ffffff;
       transform: translateY(-1px);
     }
 
@@ -3092,13 +3110,8 @@
       }
 
       .site-header::after {
-        bottom: 0.42rem;
+        bottom: -0.46rem;
         left: 0.25rem;
-      }
-
-      .beta-version {
-        top: 50%;
-        font-size: 0.72rem;
       }
 
       .logo-link {
@@ -3485,11 +3498,6 @@
         padding-right: 0.7rem;
       }
 
-      .beta-version {
-        top: 50%;
-        font-size: 0.66rem;
-      }
-
       .logo-link {
         width: 3.85rem;
         height: 1.85rem;
@@ -3646,19 +3654,19 @@
 <body>
   <header class="site-header">
     <div class="brand-cluster">
-      <a class="logo-link" href="./QR.html" aria-label="Refresh page">
+      <a class="logo-link" href="./QR.html" aria-label="Home page" data-hover-label="Home page">
         <img class="logo-image" src="photos/logo.png" alt="" aria-hidden="true" />
       </a>
-      <button class="ai-logo-button" id="aiLogoButton" type="button" aria-label="Open AI mode" aria-pressed="false">
+      <button class="ai-logo-button" id="aiLogoButton" type="button" aria-label="Open AI mode" aria-pressed="false" data-hover-label="AI">
         <span class="ai-logo-mark" aria-hidden="true"></span>
       </button>
-      <button class="settings-icon-button" id="settingsButton" type="button" aria-label="Open settings" data-i18n-aria="openSettings">
+      <button class="settings-icon-button" id="settingsButton" type="button" aria-label="Open settings" data-i18n-aria="openSettings" data-hover-label="settings">
         <svg class="header-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" />
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.35 1.05V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8.6 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.05-.35H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .35-1.05V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15.4 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.23.37.6.62 1 .6h.09a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1 .6Z" />
         </svg>
       </button>
-      <button class="login-icon-button" id="loginButton" type="button" aria-label="Login" data-i18n-aria="login">
+      <button class="login-icon-button" id="loginButton" type="button" aria-label="Login" data-i18n-aria="login" data-hover-label="login">
         <svg class="login-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
           <path d="M10 17l5-5-5-5" />
@@ -3666,8 +3674,6 @@
         </svg>
       </button>
     </div>
-
-    <div class="beta-version">Beta 1.0.2</div>
 
     <button class="theme-toggle" id="themeToggle" type="button">
       <span class="theme-icon" aria-hidden="true"></span>
@@ -5734,6 +5740,7 @@
           email: payload.email,
           idToken: payload.idToken || "",
           name: payload.displayName || "",
+          photoUrl: payload.photoUrl || "",
           provider: "google",
           createdAt: payload.createdAt || "",
           birthday: payload.birthday || "",
@@ -5817,6 +5824,16 @@
       return accountPasswordVisible ? user.password : "••••••••";
     }
 
+    function escapeAttribute(value = "") {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;",
+      }[char]));
+    }
+
     function updateAccountDisplay() {
       const user = getAuthUser();
       const email = user?.email || "";
@@ -5831,17 +5848,22 @@
 
     function updateLoginButtonState() {
       const signedIn = isSignedIn();
+      const user = getAuthUser();
+      const photoUrl = user?.photoUrl || user?.photoURL || user?.picture || "";
 
       document.body.classList.toggle("is-signed-in", signedIn);
       loginButton.classList.toggle("is-logged-in", signedIn);
+      loginButton.dataset.hoverLabel = signedIn ? "account info" : "login";
       loginButton.setAttribute("aria-label", signedIn ? t("openAccountSettings") : t("login"));
       loginButton.innerHTML = signedIn
-        ? `
-          <svg class="login-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21a8 8 0 0 1 16 0" />
-          </svg>
-        `
+        ? photoUrl
+          ? `<img class="login-account-image" src="${escapeAttribute(photoUrl)}" alt="" referrerpolicy="no-referrer" />`
+          : `
+            <svg class="login-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+          `
         : `
           <svg class="login-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -7251,13 +7273,18 @@
       logoLink.classList.remove("is-spinning");
     });
 
-    logoLink.addEventListener("click", (event) => {
-      if (!isAiMode) {
-        return;
+    logoLink.addEventListener("click", async (event) => {
+      event.preventDefault();
+
+      if (isAiMode) {
+        await exitAiMode();
       }
 
-      event.preventDefault();
-      exitAiMode();
+      if (isAccountPage) {
+        closeAccountPage();
+      }
+
+      localStorage.setItem(pageStorageKey, "main");
     });
 
     aiLogoButton.addEventListener("click", enterAiMode);

@@ -1,8 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const fs = require("fs");
-const nodemailer = require("nodemailer");
 const admin = require("firebase-admin");
 const path = require("path");
 const sharp = require("sharp");
@@ -24,8 +22,6 @@ if (!admin.apps.length && serviceAccount) {
 const db = admin.firestore();
 const app = express();
 const PORT = process.env.PORT || 3000;
-const otpStore = new Map();
-
 app.use(cors());
 app.use(express.json({ limit: "30mb" }));
 
@@ -47,35 +43,20 @@ app.get("/auth-config", (req, res) => {
   });
 });
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 20000,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const EMAIL_AUTH_REMOVED_MESSAGE = "Email/password sign in has been removed. Please use Google sign in.";
 
-transporter.verify().catch((error) => {
-  console.warn("Email transporter verification failed:", error.message || error);
-});
-
-function generateCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+function rejectEmailAuth(req, res) {
+  return res.status(410).json({ error: EMAIL_AUTH_REMOVED_MESSAGE });
 }
+
+app.post("/sign-in", rejectEmailAuth);
+app.post("/send-code", rejectEmailAuth);
+app.post("/verify-code", rejectEmailAuth);
+app.post("/send-reset-code", rejectEmailAuth);
+app.post("/reset-password", rejectEmailAuth);
 
 function cleanText(value) {
   return String(value || "").trim().replace(/[<>]/g, "");
-}
-
-function cleanEmail(email) {
-  return String(email || "").trim().toLowerCase();
-}
-
-function cleanCode(code) {
-  return String(code || "").replace(/\D/g, "");
 }
 
 function cleanChatId(chatId) {
@@ -90,10 +71,6 @@ function cleanImageDataUrl(value) {
 function buildChatTitle(prompt) {
   const words = cleanText(prompt).split(/\s+/).filter(Boolean).slice(0, 7);
   return words.join(" ") || "New chat";
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 async function requireFirebaseUser(req, res, next) {
@@ -114,144 +91,6 @@ async function requireFirebaseUser(req, res, next) {
   } catch (error) {
     return res.status(401).json({ error: "Invalid or expired sign in session." });
   }
-}
-
-async function verifyRecaptchaToken(token, remoteIp = "") {
-  const siteKey = process.env.RECAPTCHA_SITE_KEY || "";
-  const secret = process.env.RECAPTCHA_SECRET_KEY || "";
-
-  if (!siteKey) {
-    return { ok: true };
-  }
-
-  if (!token) {
-    return { ok: false, error: "Please complete the CAPTCHA." };
-  }
-
-  if (!secret) {
-    return { ok: true };
-  }
-
-  const body = new URLSearchParams({
-    secret,
-    response: token,
-  });
-
-  if (remoteIp) {
-    body.set("remoteip", remoteIp);
-  }
-
-  const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-  const payload = await response.json().catch(() => ({}));
-
-  if (!payload.success) {
-    return { ok: false, error: "CAPTCHA verification failed. Please try again." };
-  }
-
-  return { ok: true };
-}
-
-function getEmailName(email) {
-  const localPart = cleanEmail(email).split("@")[0] || "Customer";
-  return localPart.replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function saveOtp(type, email, data) {
-  const key = `${type}:${email}`;
-  otpStore.set(key, {
-    ...data,
-    type,
-    email,
-    code: generateCode(),
-    expiresAt: Date.now() + 10 * 60 * 1000,
-    attempts: 0,
-  });
-
-  return otpStore.get(key);
-}
-
-function getOtp(type, email) {
-  return otpStore.get(`${type}:${email}`);
-}
-
-function deleteOtp(type, email) {
-  otpStore.delete(`${type}:${email}`);
-}
-
-function getEmailLogoPath() {
-  const photoLogo = path.join(__dirname, "photos", "logo.png");
-  const rootLogo = path.join(__dirname, "QR.png");
-
-  return fs.existsSync(photoLogo) ? photoLogo : rootLogo;
-}
-
-function buildEmailTemplate({ name, code, title, message }) {
-  return `
-    <div style="font-family: Arial, sans-serif; background:#f5f5f5; padding:30px;">
-      <div style="max-width:520px; margin:auto; background:white; border-radius:18px; padding:28px; text-align:center; border:1px solid #eee;">
-        <img src="cid:qrlogo" alt="QMakerr" style="max-width:120px; margin-bottom:20px;" />
-        <h2 style="margin:0 0 14px; color:#111;">Dear ${name},</h2>
-        <p style="font-size:17px; color:#111; margin:0 0 8px; font-weight:bold;">${title}</p>
-        <p style="font-size:15px; color:#555; margin:0 0 18px;">${message}</p>
-        <div style="font-size:34px; font-weight:bold; letter-spacing:8px; color:#111; background:#f2f2f2; padding:18px; border-radius:14px; margin:20px 0;">${code}</div>
-        <p style="font-size:14px; color:#666;">This code will expire in 10 minutes.</p>
-        <p style="font-size:16px; color:#111; margin-top:24px;">Enjoy!</p>
-      </div>
-    </div>
-  `;
-}
-
-async function sendCodeEmail({ to, name, code, subject, title, message }) {
-  await transporter.sendMail({
-    from: `"${process.env.EMAIL_FROM_NAME || "QMakerr"}" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html: buildEmailTemplate({ name, code, title, message }),
-    attachments: [
-      {
-        filename: "QR.png",
-        path: getEmailLogoPath(),
-        cid: "qrlogo",
-      },
-    ],
-  });
-}
-
-
-function verifyOtpRecord(record, code) {
-  if (!record) {
-    return { ok: false, error: "No verification code found. Please request a new code." };
-  }
-
-  if (Date.now() > record.expiresAt) {
-    return { ok: false, error: "Verification code expired. Please request a new code.", expired: true };
-  }
-
-  if (record.attempts >= 5) {
-    return { ok: false, error: "Too many attempts. Please request a new code.", blocked: true };
-  }
-
-  record.attempts += 1;
-
-  if (record.code !== code) {
-    return { ok: false, error: "Invalid verification code." };
-  }
-
-  return { ok: true };
-}
-
-function mapFirebaseSignInError(message = "") {
-  if (message.includes("EMAIL_NOT_FOUND")) return "No account found with this email.";
-  if (message.includes("INVALID_PASSWORD")) return "Invalid password.";
-  if (message.includes("INVALID_LOGIN_CREDENTIALS")) return "Invalid email or password.";
-  if (message.includes("USER_DISABLED")) return "This account is disabled.";
-  return "Could not sign in. Please try again.";
 }
 
 function mapFirebaseGoogleError(message = "") {
@@ -405,67 +244,6 @@ async function buildColoredQrFromImage(qrBuffer, qrSize, qrColor) {
     .toBuffer();
 }
 
-app.post("/sign-in", async (req, res) => {
-  try {
-    const email = cleanEmail(req.body.email);
-    const password = String(req.body.password || "");
-    const apiKey = process.env.FIREBASE_WEB_API_KEY;
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Valid email is required." });
-    }
-
-    if (!password) {
-      return res.status(400).json({ error: "Password is required." });
-    }
-
-    if (!apiKey) {
-      return res.status(500).json({
-        error: "Firebase Web API key is missing in .env.",
-      });
-    }
-
-    const firebaseRes = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          returnSecureToken: true,
-        }),
-      }
-    );
-    const payload = await firebaseRes.json();
-
-    if (!firebaseRes.ok) {
-      return res.status(400).json({
-        error: mapFirebaseSignInError(payload?.error?.message),
-      });
-    }
-
-    const userRecord = await admin.auth().getUser(payload.localId);
-
-    return res.json({
-      success: true,
-      message: "Signed in successfully.",
-      uid: payload.localId,
-      email: payload.email,
-      idToken: payload.idToken,
-      provider: "password",
-      createdAt: userRecord.metadata.creationTime,
-      birthday: userRecord.customClaims?.birthday || "",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message || "Server error",
-    });
-  }
-});
-
 app.post("/google-sign-in", async (req, res) => {
   try {
     const accessToken = cleanText(req.body.accessToken);
@@ -526,6 +304,7 @@ app.post("/google-sign-in", async (req, res) => {
       uid: payload.localId,
       email: payload.email,
       displayName: payload.displayName || "",
+      photoUrl: payload.photoUrl || payload.photoURL || userRecord.photoURL || "",
       idToken: payload.idToken,
       provider: "google",
       createdAt: userRecord.metadata.creationTime,
@@ -736,217 +515,6 @@ app.delete("/ai-chats/:chatId", requireFirebaseUser, async (req, res) => {
     return res.json({ success: true });
   } catch (error) {
     return res.status(500).json({ error: error.message || "Could not delete chat." });
-  }
-});
-
-app.post("/send-code", async (req, res) => {
-  try {
-    const email = cleanEmail(req.body.email);
-    const name = cleanText(req.body.name) || getEmailName(email);
-    const password = String(req.body.password || "");
-    const birthday = cleanText(req.body.birthday);
-    const recaptchaToken = cleanText(req.body.recaptchaToken);
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Valid email is required." });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters." });
-    }
-
-    const recaptcha = await verifyRecaptchaToken(recaptchaToken, req.ip);
-
-    if (!recaptcha.ok) {
-      return res.status(400).json({ error: recaptcha.error });
-    }
-
-    try {
-      await admin.auth().getUserByEmail(email);
-      return res.status(400).json({ error: "This email is already registered." });
-    } catch (err) {
-      if (err.code !== "auth/user-not-found") {
-        throw err;
-      }
-    }
-
-    const record = saveOtp("signup", email, {
-      name,
-      password,
-      birthday,
-    });
-
-    try {
-      await sendCodeEmail({
-        to: email,
-        name,
-        code: record.code,
-        subject: "Your QMakerr verification code",
-        title: "Your verification code is:",
-        message: "Use this code to complete your account registration.",
-      });
-    } catch (error) {
-      deleteOtp("signup", email);
-      throw error;
-    }
-
-    return res.json({
-      success: true,
-      message: "Verification code sent.",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message || "Server error",
-    });
-  }
-});
-
-app.post("/verify-code", async (req, res) => {
-  try {
-    const email = cleanEmail(req.body.email);
-    const code = cleanCode(req.body.code);
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Valid email is required." });
-    }
-
-    if (!/^[0-9]{6}$/.test(code)) {
-      return res.status(400).json({ error: "Please enter a valid 6-digit code." });
-    }
-
-    const record = getOtp("signup", email);
-    const result = verifyOtpRecord(record, code);
-
-    if (!result.ok) {
-      if (result.expired || result.blocked) {
-        deleteOtp("signup", email);
-      }
-      return res.status(400).json({ error: result.error });
-    }
-
-    const user = await admin.auth().createUser({
-      email,
-      password: record.password,
-      displayName: record.name,
-      emailVerified: true,
-    });
-    await admin.auth().setCustomUserClaims(user.uid, {
-      birthday: record.birthday || "",
-    });
-
-    deleteOtp("signup", email);
-
-    return res.json({
-      success: true,
-      message: "Account verified and created successfully.",
-      uid: user.uid,
-      email,
-      createdAt: user.metadata.creationTime,
-      birthday: record.birthday || "",
-    });
-  } catch (error) {
-    if (error.code === "auth/email-already-exists") {
-      return res.status(400).json({ error: "This email is already registered." });
-    }
-
-    return res.status(500).json({
-      error: error.message || "Server error",
-    });
-  }
-});
-
-app.post("/send-reset-code", async (req, res) => {
-  try {
-    const email = cleanEmail(req.body.email);
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Valid email is required." });
-    }
-
-    let user;
-
-    try {
-      user = await admin.auth().getUserByEmail(email);
-    } catch (err) {
-      if (err.code === "auth/user-not-found") {
-        return res.status(400).json({ error: "No account found with this email." });
-      }
-      throw err;
-    }
-
-    const name = user.displayName || "Customer";
-    const record = saveOtp("reset", email, {
-      name,
-      uid: user.uid,
-    });
-
-    try {
-      await sendCodeEmail({
-        to: email,
-        name,
-        code: record.code,
-        subject: "Your QMakerr password reset code",
-        title: "Your password reset code is:",
-        message: "Use this code to reset your password.",
-      });
-    } catch (error) {
-      deleteOtp("reset", email);
-      throw error;
-    }
-
-    return res.json({
-      success: true,
-      message: "Password reset code sent.",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message || "Server error",
-    });
-  }
-});
-
-app.post("/reset-password", async (req, res) => {
-  try {
-    const email = cleanEmail(req.body.email);
-    const code = cleanCode(req.body.code);
-    const newPassword = String(req.body.newPassword || "");
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Valid email is required." });
-    }
-
-    if (!/^[0-9]{6}$/.test(code)) {
-      return res.status(400).json({ error: "Please enter a valid 6-digit code." });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: "New password must be at least 6 characters." });
-    }
-
-    const record = getOtp("reset", email);
-    const result = verifyOtpRecord(record, code);
-
-    if (!result.ok) {
-      if (result.expired || result.blocked) {
-        deleteOtp("reset", email);
-      }
-      return res.status(400).json({ error: result.error });
-    }
-
-    await admin.auth().updateUser(record.uid, {
-      password: newPassword,
-    });
-
-    deleteOtp("reset", email);
-
-    return res.json({
-      success: true,
-      message: "Password reset successfully. You can sign in now.",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message || "Server error",
-    });
   }
 });
 
